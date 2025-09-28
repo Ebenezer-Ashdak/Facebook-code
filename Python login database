@@ -1,0 +1,65 @@
+import sqlite3
+import hashlib  # For hashing passwords
+
+# ------------------ DATABASE CONNECTION ------------------
+# EDIT: Change 'users.db' to any database file path you want
+conn = sqlite3.connect('users.db')
+cursor = conn.cursor()
+
+# ------------------ TABLE CREATION ------------------
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT
+)
+''')
+
+# ------------------ PASSWORD HASHING FUNCTION ------------------
+def hash_password(password):
+    """Hash a password using SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# ------------------ REGISTER FUNCTION ------------------
+def register(username, password):
+    if not username or not password:
+        print("Username and password cannot be empty.")
+        return
+
+    hashed_pw = hash_password(password)
+    try:
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, hashed_pw))
+        conn.commit()
+        print(f"User '{username}' registered successfully!")
+    except sqlite3.IntegrityError:
+        print("Username already exists. Try a different one.")
+    except Exception as e:
+        print(f"Unexpected error during registration: {e}")
+
+# ------------------ LOGIN FUNCTION ------------------
+def login(username, password):
+    if not username or not password:
+        print("Username and password cannot be empty.")
+        return
+
+    hashed_pw = hash_password(password)
+    try:
+        cursor.execute('SELECT * FROM users WHERE username=? AND password=?', (username, hashed_pw))
+        result = cursor.fetchone()
+        if result:
+            print("Login successful!")
+        else:
+            print("Invalid username or password.")
+    except Exception as e:
+        print(f"Unexpected error during login: {e}")
+
+# ------------------ TESTING ------------------
+# EDIT: You can change these usernames/passwords for testing
+register('Alice', '1234')
+register('Bob', 'abcd')
+
+login('Alice', '1234')  # Correct
+login('Bob', 'wrong')   # Incorrect
+login('Charlie', 'xyz') # Non-existent user
+
+# ------------------ CLOSE DATABASE ------------------
+conn.close()
